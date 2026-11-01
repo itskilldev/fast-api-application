@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Daybook | AI Notes</title>
+<style>
+:root{
+  --navy:#1f2466;--indigo:#3b3f9e;--lavender:#e6e8f6;--soft:#f4f5fb;
+  --text:#2b2d4a;--muted:#6a6d8f;--accent:#6c72d9;--danger:#c0392b;--ok:#1e8e5a;
+  --radius:14px;--shadow:0 8px 24px rgba(31,36,102,.10);
+}
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--soft);color:var(--text);line-height:1.55;min-height:100vh}
+button{font-family:inherit;cursor:pointer}
+.hidden{display:none!important}
+
+/* top bar */
+.topbar{background:#fff;border-bottom:1px solid var(--lavender);padding:14px 22px;display:flex;justify-content:space-between;align-items:center;position:sticky;top:0;z-index:5}
+.brand{font-size:1.35rem;font-weight:700;color:var(--navy);letter-spacing:.3px}
+.brand span{color:var(--accent)}
+.who{display:flex;align-items:center;gap:12px;font-size:.92rem;color:var(--muted)}
+.who b{color:var(--navy)}
+.btn{padding:9px 20px;border-radius:50px;border:2px solid var(--indigo);font-weight:600;font-size:.9rem;transition:.2s;background:transparent;color:var(--indigo)}
+.btn:hover{background:var(--indigo);color:#fff}
+.btn.primary{background:var(--indigo);color:#fff}
+.btn.primary:hover{background:var(--navy);border-color:var(--navy)}
+.btn.danger{border-color:var(--danger);color:var(--danger)}
+.btn.danger:hover{background:var(--danger);color:#fff}
+.btn.small{padding:5px 14px;font-size:.8rem}
+.btn:disabled{opacity:.55;cursor:wait}
+
+/* auth */
+.auth-wrap{min-height:calc(100vh - 62px);display:flex;align-items:center;justify-content:center;padding:24px}
+.auth{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:34px;width:min(420px,100%)}
+.auth h1{color:var(--navy);font-size:1.7rem;margin-bottom:4px}
+.auth p.sub{color:var(--muted);margin-bottom:22px;font-size:.95rem}
+.tabs{display:flex;background:var(--lavender);border-radius:50px;padding:4px;margin-bottom:20px}
+.tabs button{flex:1;border:0;background:transparent;padding:9px;border-radius:50px;font-weight:600;color:var(--indigo)}
+.tabs button.active{background:var(--indigo);color:#fff}
+label{display:block;font-size:.85rem;font-weight:600;color:var(--navy);margin-bottom:5px}
+input,textarea{width:100%;padding:12px 14px;border:1.5px solid var(--lavender);border-radius:10px;font-family:inherit;font-size:.95rem;margin-bottom:14px;outline:none;background:#fff;color:var(--text)}
+input:focus,textarea:focus{border-color:var(--accent)}
+textarea{min-height:110px;resize:vertical}
+.msg{padding:10px 14px;border-radius:10px;font-size:.88rem;margin-bottom:14px}
+.msg.err{background:#fdecea;color:var(--danger)}
+.msg.ok{background:#e8f6ef;color:var(--ok)}
+
+/* app */
+.container{width:min(900px,94%);margin:28px auto 60px}
+.composer{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:22px;margin-bottom:26px}
+.composer h2{color:var(--navy);font-size:1.1rem;margin-bottom:14px}
+.list-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}
+.list-head h2{color:var(--navy);font-size:1.1rem}
+.count{background:var(--lavender);color:var(--indigo);padding:2px 12px;border-radius:50px;font-size:.8rem;font-weight:600;margin-left:8px}
+.note{background:#fff;border-radius:var(--radius);box-shadow:var(--shadow);padding:20px 22px;margin-bottom:16px;border-left:4px solid var(--indigo)}
+.note h3{color:var(--navy);font-size:1.05rem;margin-bottom:6px}
+.note .body{white-space:pre-wrap;font-size:.94rem;margin-bottom:10px}
+.note .date{font-size:.78rem;color:var(--muted);margin-bottom:10px}
+.summary{background:var(--soft);border:1px dashed var(--accent);border-radius:10px;padding:10px 14px;font-size:.9rem;margin-bottom:12px}
+.summary b{color:var(--indigo)}
+.actions{display:flex;gap:8px;flex-wrap:wrap}
+.empty{text-align:center;color:var(--muted);padding:40px 10px;background:#fff;border-radius:var(--radius)}
+.footer{text-align:center;color:var(--muted);font-size:.85rem;margin-bottom:30px}
+.footer a{color:var(--indigo)}
+@media(max-width:560px){.who span.name{display:none}}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">Day<span>book</span></div>
+  <div class="who hidden" id="who">
+    <span class="name">Signed in as <b id="whoName"></b></span>
+    <button class="btn small" id="logoutBtn">Sign out</button>
+  </div>
+</div>
+
+<!-- AUTH -->
+<div class="auth-wrap" id="authView">
+  <div class="auth">
+    <h1>Your thoughts, well kept.</h1>
+    <p class="sub">A private notes app with AI summaries.</p>
+    <div class="tabs">
+      <button type="button" id="tabLogin" class="active">Sign in</button>
+      <button type="button" id="tabRegister">Create account</button>
+    </div>
+    <div id="authMsg"></div>
+    <form id="authForm">
+      <label for="username">Username</label>
+      <input id="username" autocomplete="username" required minlength="3" maxlength="50">
+      <label for="password">Password</label>
+      <input id="password" type="password" autocomplete="current-password" required minlength="6">
+      <button class="btn primary" style="width:100%" id="authSubmit" type="submit">Sign in</button>
+    </form>
+  </div>
+</div>
+
+<!-- NOTES -->
+<div class="container hidden" id="appView">
+  <div class="composer">
+    <h2 id="composerTitle">New note</h2>
+    <div id="noteMsg"></div>
+    <form id="noteForm">
+      <label for="title">Title</label>
+      <input id="title" required maxlength="200">
+      <label for="content">Content</label>
+      <textarea id="content" required></textarea>
+      <div class="actions">
+        <button class="btn primary" type="submit" id="noteSubmit">Save note</button>
+        <button class="btn hidden" type="button" id="cancelEdit">Cancel edit</button>
+      </div>
+    </form>
+  </div>
+
+  <div class="list-head">
+    <h2>All notes <span class="count" id="count">0</span></h2>
+  </div>
+  <div id="notes"></div>
+  <div class="footer"><a href="/docs" target="_blank" rel="noopener">API docs ↗</a></div>
+</div>
+
+<script>
+// If this page is opened from a different server (e.g. VS Code Live Server on :5500),
+// talk to the FastAPI server directly. When served by FastAPI itself, use same origin.
+const isLocal = ['localhost', '127.0.0.1', ''].includes(location.hostname);
+const API = (isLocal && location.port !== '8000') ? 'http://127.0.0.1:8000' : '';
+
+const $ = id => document.getElementById(id);
+let token = null, mode = 'login', editingId = null;
+try { token = localStorage.getItem('daybook_token'); } catch (e) {}
+
+function show(el, on){ el.classList.toggle('hidden', !on); }
+function flash(target, text, type='err'){
+  target.innerHTML = '';
+  if(!text) return;
+  const d = document.createElement('div');
+  d.className = 'msg ' + type; d.textContent = text;
+  target.appendChild(d);
+}
+function errText(data, fallback){
+  if(!data) return fallback;
+  if(typeof data.detail === 'string') return data.detail;
+  if(Array.isArray(data.detail)) return data.detail.map(x => x.msg).join('; ');
+  return fallback;
+}
+
+async function api(path, opts = {}){
+  const headers = Object.assign({}, opts.headers || {});
+  if(token) headers['Authorization'] = 'Bearer ' + token;
+  let res;
+  try { res = await fetch(API + path, Object.assign({}, opts, { headers })); }
+  catch (e) { throw new Error('Cannot reach the API. Is the server running?'); }
+  if(res.status === 401 && token && path !== '/auth/login'){ logout(); throw new Error('Session expired. Please sign in again.'); }
+  if(res.status === 204) return null;
+  let data = null;
+  try { data = await res.json(); } catch (e) {}
+  if(!res.ok) throw new Error(errText(data, 'Request failed (' + res.status + ')'));
+  return data;
+}
+
+/* ---------- auth ---------- */
+function setMode(m){
+  mode = m;
+  $('tabLogin').classList.toggle('active', m === 'login');
+  $('tabRegister').classList.toggle('active', m === 'register');
+  $('authSubmit').textContent = m === 'login' ? 'Sign in' : 'Create account';
+  $('password').autocomplete = m === 'login' ? 'current-password' : 'new-password';
+  flash($('authMsg'), '');
+}
+$('tabLogin').onclick = () => setMode('login');
+$('tabRegister').onclick = () => setMode('register');
+
+async function login(username, password){
+  const body = new URLSearchParams({ username, password });
+  const data = await api('/auth/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body
+  });
+  token = data.access_token;
+  try { localStorage.setItem('daybook_token', token); } catch (e) {}
+}
+
+$('authForm').onsubmit = async e => {
+  e.preventDefault();
+  const username = $('username').value.trim(), password = $('password').value;
+  const btn = $('authSubmit'); btn.disabled = true; flash($('authMsg'), '');
+  try {
+    if(mode === 'register'){
+      await api('/auth/register', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password })
+      });
+    }
+    await login(username, password);
+    await enterApp();
+  } catch (err) { flash($('authMsg'), err.message); }
+  btn.disabled = false;
+};
+
+function logout(){
+  token = null;
+  try { localStorage.removeItem('daybook_token'); } catch (e) {}
+  resetEditor();
+  show($('appView'), false); show($('who'), false); show($('authView'), true);
+}
+$('logoutBtn').onclick = logout;
+
+async function enterApp(){
+  const me = await api('/auth/me');
+  $('whoName').textContent = me.username;
+  show($('authView'), false); show($('appView'), true); show($('who'), true);
+  $('password').value = '';
+  await loadNotes();
+}
+
+/* ---------- notes ---------- */
+let notes = [];
+async function loadNotes(){
+  notes = await api('/notes?limit=100');
+  render();
+}
+
+function render(){
+  $('count').textContent = notes.length;
+  const box = $('notes'); box.innerHTML = '';
+  if(!notes.length){
+    const d = document.createElement('div'); d.className = 'empty';
+    d.textContent = 'No notes yet. Write your first one above.';
+    box.appendChild(d); return;
+  }
+  notes.forEach(n => {
+    const el = document.createElement('div'); el.className = 'note';
+    const h = document.createElement('h3'); h.textContent = n.title;
+    const date = document.createElement('div'); date.className = 'date';
+    date.textContent = new Date(n.updated_at).toLocaleString();
+    const body = document.createElement('div'); body.className = 'body'; body.textContent = n.content;
+    el.append(h, date, body);
+
+    if(n.summary){
+      const s = document.createElement('div'); s.className = 'summary';
+      const b = document.createElement('b'); b.textContent = 'AI summary: ';
+      s.append(b, document.createTextNode(n.summary));
+      el.appendChild(s);
+    }
+
+    const act = document.createElement('div'); act.className = 'actions';
+    const sum = btn(n.summary ? 'Re-summarize' : '✨ Summarize', 'btn small primary', async b => {
+      b.disabled = true; b.textContent = 'Summarizing…';
+      try { await api('/ai/notes/' + n.id + '/summarize', { method: 'POST' }); await loadNotes(); }
+      catch (err) { flash($('noteMsg'), err.message); b.disabled = false; b.textContent = 'Summarize'; }
+    });
+    const edit = btn('Edit', 'btn small', () => startEdit(n));
+    const del = btn('Delete', 'btn small danger', async () => {
+      if(!confirm('Delete this note?')) return;
+      try { await api('/notes/' + n.id, { method: 'DELETE' }); if(editingId === n.id) resetEditor(); await loadNotes(); }
+      catch (err) { flash($('noteMsg'), err.message); }
+    });
+    act.append(sum, edit, del); el.appendChild(act);
+    box.appendChild(el);
+  });
+}
+function btn(label, cls, handler){
+  const b = document.createElement('button'); b.type = 'button'; b.className = cls; b.textContent = label;
+  b.onclick = () => handler(b); return b;
+}
+
+function startEdit(n){
+  editingId = n.id;
+  $('title').value = n.title; $('content').value = n.content;
+  $('composerTitle').textContent = 'Edit note';
+  $('noteSubmit').textContent = 'Update note';
+  show($('cancelEdit'), true);
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function resetEditor(){
+  editingId = null; $('noteForm').reset();
+  $('composerTitle').textContent = 'New note';
+  $('noteSubmit').textContent = 'Save note';
+  show($('cancelEdit'), false); flash($('noteMsg'), '');
+}
+$('cancelEdit').onclick = resetEditor;
+
+$('noteForm').onsubmit = async e => {
+  e.preventDefault();
+  const payload = { title: $('title').value.trim(), content: $('content').value.trim() };
+  const b = $('noteSubmit'); b.disabled = true; flash($('noteMsg'), '');
+  try {
+    if(editingId) await api('/notes/' + editingId, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    else await api('/notes', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+    resetEditor(); await loadNotes();
+  } catch (err) { flash($('noteMsg'), err.message); }
+  b.disabled = false;
+};
+
+/* ---------- start ---------- */
+(async () => {
+  if(token){ try { await enterApp(); } catch (e) { logout(); } }
+})();
+</script>
+</body>
+</html>
